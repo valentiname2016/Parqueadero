@@ -33,7 +33,7 @@ void Placa::generarAleatoria(){
     std::time_t tiempo_c = std::chrono::system_clock::to_time_t(ahora);
     std::tm* tiempo_local = std::localtime(&tiempo_c);
     
-    //Se usa un stringstream() para formatear la hora como texto
+    //Se usa un stringstream(el valor que tengo de hora, para convertirla en un texto que pueda imprimir o mostrar después) para formatear la hora como texto
     std::stringstream ss;
     ss << std::put_time(tiempo_local, "%H:%M:%S");
     
@@ -42,4 +42,23 @@ void Placa::generarAleatoria(){
 
     celda = rand()%10 + 1;
 
+}
+
+string Placa::placaTexto(){
+    return serie + "," + hora + "," + to_string(celda);
+}
+
+
+string Placa::getSerie(){
+    return serie;
+}
+
+
+string Placa::getHora(){
+    return hora;
+}
+
+
+int Placa::getCelda(){
+    return celda;
 }

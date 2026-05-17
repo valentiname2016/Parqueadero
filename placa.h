@@ -11,7 +11,9 @@ class Placa{
     public:
         Placa();
         void generarAleatoria();
-
-    
+        string placaTexto();
+        string getSerie();
+        string getHora();
+        int getCelda(); 
 
 };
