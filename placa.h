@@ -4,7 +4,7 @@ using namespace std;
 class Placa{
 
     private:
-        string numero;
+        string serie;
         string hora;
         int celda;
     
