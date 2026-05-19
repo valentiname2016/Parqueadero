@@ -40,7 +40,8 @@ int main() {
     direccion_servidor.sin_port = htons(puerto);
  
 
-    if (inet_pton(AF_INET, ip_servidor.c_str(), &direccion_servidor.sin_addr) <= 0) {
+    direccion_servidor.sin_addr.s_addr = inet_addr(ip_servidor.c_str());
+    if (direccion_servidor.sin_addr.s_addr == INADDR_NONE) {
         cout << "Direccion IP invalida o no soportada.\n";
         closesocket(socket_cliente);
         WSACleanup();
