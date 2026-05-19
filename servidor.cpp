@@ -35,9 +35,9 @@ extern "C" {
         setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 
         direccion.sin_family = AF_INET;
-        // Esta línes permite que pueda percibir cualquier pc
+        //percibe el computador del cliente
         direccion.sin_addr.s_addr = INADDR_ANY; 
-        // Este es el puerto de conexión
+        //Puerto de conexión
         direccion.sin_port = htons(8080);       
 
         if (bind(server_fd, (struct sockaddr *)&direccion, sizeof(direccion)) < 0) return false;
@@ -47,7 +47,7 @@ extern "C" {
         return true;
     }
 
-    //función que Python llamará constantemente para ver si llegó una placa
+    //función de Python para verificar si llegó una placa
 bool recibirPlaca(DatosPlaca* resultado) {
     
     if (socket_cliente == -1) {
@@ -68,7 +68,6 @@ bool recibirPlaca(DatosPlaca* resultado) {
         
         int bytes_leidos = recv(socket_cliente, buffer, 1024, MSG_DONTWAIT);
         
-        // Si llegaron datos nuevos
         if (bytes_leidos > 0){
             //Se pasa a string la información
             string datos(buffer);
@@ -87,14 +86,14 @@ bool recibirPlaca(DatosPlaca* resultado) {
             //Diccionario
             string tipo_accion = "";
             if (celdas.count(serie) > 0){
-                celda_solicitada = celdas[serie]; // Recordamos su celda original
+                celda_solicitada = celdas[serie];
                 //Se libera el espacio del parqueadero
                 celdas.erase(serie);              
-                tipo_accion = "SALIDA";
+                tipo_accion = "Salida";
             } else {
                 //Se ocupa el espacio del parqueadero
                 celdas[serie] = celda_solicitada; 
-                tipo_accion = "INGRESO";
+                tipo_accion = "Ingreso";
             }
 
             //Se copia la info de la placa para enviarla
