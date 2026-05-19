@@ -1,8 +1,10 @@
+#define _WIN32_WINNT 0x0600
 #include <iostream>
 #include <string>
 #include <cstring>
 #include <winsock2.h>   // Librería para socket
 #include <ws2tcpip.h>   // Para IPs
+#include <ctime>
 #include "generador.h"  
  
 // Parsa usar librería de red (Ws2_32.lib)
