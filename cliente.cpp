@@ -70,7 +70,7 @@ int main() {
         
         Placa nueva_placa = mi_generador.generarPlaca();
         
-        string mensaje = nueva_placa.placaTexto();
+        string mensaje = nueva_placa.placaTexto() + "\n";
  
         cout << "[Cliente Windows] Enviando: " << mensaje << "\n";
  
