@@ -66,10 +66,10 @@ extern "C" {
 
             char buffer[1024] = {0};
             
-            int bytes_leidos = recv(socket_cliente, buffer, 1023, MSG_DONTWAIT);
+            int bytes_leidos = recv(socket_cliente, buffer, 1023, 0);
             
 
-        if (bytes_leidos > 0) {
+        if (bytes_leidos > 0 && buffer[0] != '\0') {
             buffer[bytes_leidos] = '\0'; 
 
             string mensaje_limpio(buffer);
@@ -89,7 +89,21 @@ extern "C" {
 
             int asignados = sscanf(buffer, "%[^,],%[^,],%d,%[^,]", serie_aux, hora_aux, &celda_aux);
 
-            if (asignados >= 3) { 
+            if (asignados >= 3) {
+                 string placa = serie_aux;
+
+                if (celdas.find(placa) == celdas.end()) {
+
+                    celdas[placa] = celda_aux;
+                    strcpy(accion_aux, "INGRESO");
+
+                } else {
+
+                 celda_aux = celdas[placa];
+                 celdas.erase(placa);
+                 strcpy(accion_aux, "SALIDA");
+                }
+                
                 resultado->celda = celda_aux;
                 
                 static char serie_persistente[20];

@@ -74,7 +74,12 @@ int main() {
  
         cout << "[Cliente Windows] Enviando: " << mensaje << "\n";
  
-        send(socket_cliente, mensaje.c_str(), mensaje.length(), 0);
+        int resultado = send(socket_cliente, mensaje.c_str(), mensaje.length(), 0);
+        
+        if (resultado == SOCKET_ERROR) {
+            cout << "Error enviando datos\n";
+        }
+        
  
         Sleep(5000);
     }

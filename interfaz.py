@@ -76,7 +76,7 @@ class InterfazParqueadero:
         if self.libreria.recibirPlaca(ctypes.byref(datos_recibidos)):
             placa = buf_serie.value.decode('utf-8')
             hora = buf_hora.value.decode('utf-8')
-            accion = buf_accion.value.decode('utf-8').strip()
+            accion = buf_accion.value.decode('utf-8', errors='ignore').strip().upper()
             celda = datos_recibidos.celda
  
             if accion == "INGRESO":
