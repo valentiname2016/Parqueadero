@@ -87,7 +87,7 @@ extern "C" {
             char accion_aux[20] = {0};
             int celda_aux = 0;
 
-            int asignados = sscanf(buffer, "%[^,],%[^,],%d,%[^,]", serie_aux, hora_aux, &celda_aux, accion_aux);
+            int asignados = sscanf(buffer, "%[^,],%[^,],%d,%[^,]", serie_aux, hora_aux, &celda_aux);
 
             if (asignados >= 3) { 
                 resultado->celda = celda_aux;
