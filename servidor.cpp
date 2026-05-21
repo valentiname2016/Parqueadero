@@ -48,64 +48,67 @@ extern "C" {
     }
 
     //función de Python para verificar si llegó una placa
-bool recibirPlaca(DatosPlaca* resultado) {
-    
-    if (socket_cliente == -1) {
-        struct sockaddr_in address;
+    bool recibirPlaca(DatosPlaca* resultado) {
         
-        socklen_t addrlen = sizeof(address); 
-       
-        socket_cliente = accept(server_fd, (struct sockaddr *)&address, &addrlen);
+        if (socket_cliente == -1) {
+            struct sockaddr_in address;
+            
+            socklen_t addrlen = sizeof(address); 
         
-        if (socket_cliente < 0) {
-            socket_cliente = -1;
-            return false;
+            socket_cliente = accept(server_fd, (struct sockaddr *)&address, &addrlen);
+            
+            if (socket_cliente < 0) {
+                socket_cliente = -1;
+                return false;
+            }
+            cout << "El usuario se ha conectado al socket\n";
         }
-        cout << "El usuario se ha conectado al socket\n";
-    }
 
-        char buffer[1024] = {0};
-        
-        int bytes_leidos = recv(socket_cliente, buffer, 1024, MSG_DONTWAIT);
-        
-        if (bytes_leidos > 0){
-            //Se pasa a string la información
-            string datos(buffer);
-            stringstream ss(datos);
-            string serie, hora, s_celda;
+            char buffer[1024] = {0};
+            
+            int bytes_leidos = recv(socket_cliente, buffer, 1023, MSG_DONTWAIT);
+            
 
-            getline(ss, serie, ',');
-            getline(ss, hora, ',');
-            getline(ss, s_celda, ',');
+        if (bytes_leidos > 0) {
+            buffer[bytes_leidos] = '\0'; 
 
-            if(serie.empty() || hora.empty() || s_celda.empty()) return false;
-
-            int celda_solicitada = stoi(s_celda);
-
-
-            //Diccionario
-            string tipo_accion = "";
-            if (celdas.count(serie) > 0){
-                celda_solicitada = celdas[serie];
-                //Se libera el espacio del parqueadero
-                celdas.erase(serie);              
-                tipo_accion = "Salida";
-            } else {
-                //Se ocupa el espacio del parqueadero
-                celdas[serie] = celda_solicitada; 
-                tipo_accion = "Ingreso";
+            string mensaje_limpio(buffer);
+            while (!mensaje_limpio.empty() && (mensaje_limpio.back() == '\n' || mensaje_limpio.back() == '\r')) {
+                mensaje_limpio.pop_back();
             }
 
-            //Se copia la info de la placa para enviarla
-            strcpy(resultado->serie, serie.c_str());
-            strcpy(resultado->hora, hora.c_str());
-            resultado->celda = celda_solicitada;
-            strcpy(resultado->accion, tipo_accion.c_str());
+            cout << "[C++] Procesando mensaje limpio: " << mensaje_limpio << "\n";
 
-            //True para avisar que hay una placa nueva
-            return true;
+            strncpy(buffer, mensaje_limpio.c_str(), sizeof(buffer) - 1);
+            buffer[sizeof(buffer) - 1] = '\0';
+
+            char serie_aux[20] = {0};
+            char hora_aux[20] = {0};
+            char accion_aux[20] = {0};
+            int celda_aux = 0;
+
+            int asignados = sscanf(buffer, "%[^,],%[^,],%d,%[^,]", serie_aux, hora_aux, &celda_aux, accion_aux);
+
+            if (asignados >= 3) { 
+                resultado->celda = celda_aux;
+                
+                static char serie_persistente[20];
+                static char hora_persistente[20];
+                static char accion_persistente[20];
+                
+                strcpy(serie_persistente, serie_aux);
+                strcpy(hora_persistente, hora_aux);
+                
+                strcpy(accion_persistente, accion_aux); 
+
+                strcpy(resultado->serie, serie_persistente);
+                strcpy(resultado->hora, hora_persistente);
+                strcpy(resultado->accion, accion_persistente);
+
+                cout << "[C++] Estructura armada con exito para Python. Celda: " << resultado->celda << "\n";
+                return true;
+            }
         }
-        
         return false;
     }
 }
