@@ -5,26 +5,24 @@
 #include <cstring>
 #include <unistd.h>
 #include <arpa/inet.h>
+#include <fcntl.h> // Para configurar sockets no bloqueantes si es necesario
 
 using namespace std;
 
-//Estructura para empaquetar los datos de la placa
+// Estructura corregida: Ahora usa punteros (char*) para acoplarse con ctypes.c_char_p de Python
 struct DatosPlaca {
-    char serie[10];
-    char hora[10];
+    const char* serie;
+    const char* hora;
     int celda;
-    char accion[10]; 
+    const char* accion; 
 };
 
-//Diccionario con información de la placa, celda
 map<string, int> celdas; 
 int server_fd = -1;
 int socket_cliente = -1;
 
-//Todo lo que esté dentro de extern "C" puede ser leído por Python
 extern "C" {
 
-    //función para encender el servidor socket
     bool iniciarServidor() {
         struct sockaddr_in direccion;
         int opt = 1;
@@ -35,41 +33,41 @@ extern "C" {
         setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 
         direccion.sin_family = AF_INET;
-        //percibe el computador del cliente
         direccion.sin_addr.s_addr = INADDR_ANY; 
-        //Puerto de conexión
         direccion.sin_port = htons(8080);       
 
         if (bind(server_fd, (struct sockaddr *)&direccion, sizeof(direccion)) < 0) return false;
         if (listen(server_fd, 3) < 0) return false;
 
-        cout << "[C++] Servidor listo. Esperando cliente en puerto 8080...\n";
+        // Configurar el servidor principal como NO BLOQUEANTE para que accept() no congele la interfaz
+        fcntl(server_fd, F_SETFL, O_NONBLOCK);
+
+        cout << "Servidor listo. Esperando cliente en puerto 8080 (Modo No Bloqueante)...\n";
         return true;
     }
 
-    //función de Python para verificar si llegó una placa
     bool recibirPlaca(DatosPlaca* resultado) {
-        
+        // Intentar aceptar al cliente si no está conectado
         if (socket_cliente == -1) {
             struct sockaddr_in address;
-            
             socklen_t addrlen = sizeof(address); 
         
             socket_cliente = accept(server_fd, (struct sockaddr *)&address, &addrlen);
             
             if (socket_cliente < 0) {
-                socket_cliente = -1;
+                socket_cliente = -1; // No hay nadie intentando conectarse aún
                 return false;
             }
-            cout << "El usuario se ha conectado al socket\n";
+            // Cuando se conecta, configuramos el canal de lectura como NO BLOQUEANTE también
+            fcntl(socket_cliente, F_SETFL, O_NONBLOCK);
+            cout << "¡El usuario se ha conectado al socket!\n";
         }
 
-            char buffer[1024] = {0};
+        char buffer[1024] = {0};
+        // Leemos con MSG_DONTWAIT para que si no hay datos en ese milisegundo, la función retorne inmediatamente
+        int bytes_leidos = recv(socket_cliente, buffer, 1023, MSG_DONTWAIT);
             
-            int bytes_leidos = recv(socket_cliente, buffer, 1023, 0);
-            
-
-        if (bytes_leidos > 0 && buffer[0] != '\0') {
+        if (bytes_leidos > 0) {
             buffer[bytes_leidos] = '\0'; 
 
             string mensaje_limpio(buffer);
@@ -77,51 +75,51 @@ extern "C" {
                 mensaje_limpio.pop_back();
             }
 
-            cout << "[C++] Procesando mensaje limpio: " << mensaje_limpio << "\n";
-
             strncpy(buffer, mensaje_limpio.c_str(), sizeof(buffer) - 1);
             buffer[sizeof(buffer) - 1] = '\0';
 
             char serie_aux[20] = {0};
             char hora_aux[20] = {0};
-            char accion_aux[20] = {0};
             int celda_aux = 0;
 
-            int asignados = sscanf(buffer, "%[^,],%[^,],%d,%[^,]", serie_aux, hora_aux, &celda_aux);
+            // Valentina envía: "SERIE,HORA,CELDA" (3 elementos)
+            int asignados = sscanf(buffer, "%[^,],%[^,],%d", serie_aux, hora_aux, &celda_aux);
 
             if (asignados >= 3) {
-                 string placa = serie_aux;
+                string placa = serie_aux;
+                static char accion_aux[20] = {0};
 
+                // Lógica del mapa/diccionario para controlar ingresos y salidas
                 if (celdas.find(placa) == celdas.end()) {
-
                     celdas[placa] = celda_aux;
                     strcpy(accion_aux, "INGRESO");
-
                 } else {
-
-                 celda_aux = celdas[placa];
-                 celdas.erase(placa);
-                 strcpy(accion_aux, "SALIDA");
+                    celda_aux = celdas[placa];
+                    celdas.erase(placa);
+                    strcpy(accion_aux, "SALIDA");
                 }
                 
-                resultado->celda = celda_aux;
-                
+                // Memoria estática persistente para que Python pueda leer los punteros sin que se borren
                 static char serie_persistente[20];
                 static char hora_persistente[20];
-                static char accion_persistente[20];
                 
                 strcpy(serie_persistente, serie_aux);
                 strcpy(hora_persistente, hora_aux);
                 
-                strcpy(accion_persistente, accion_aux); 
+                // Asignamos las direcciones de los punteros de forma exacta
+                resultado->celda = celda_aux;
+                resultado->serie = serie_persistente;
+                resultado->hora = hora_persistente;
+                resultado->accion = accion_aux;
 
-                strcpy(resultado->serie, serie_persistente);
-                strcpy(resultado->hora, hora_persistente);
-                strcpy(resultado->accion, accion_persistente);
-
-                cout << "[C++] Estructura armada con exito para Python. Celda: " << resultado->celda << "\n";
-                return true;
+                cout << "[C++ exitoso] Placa: " << resultado->serie << " | Accion: " << resultado->accion << " | Celda: " << resultado->celda << "\n";
+                return true; 
             }
+        } else if (bytes_leidos == 0) {
+            // Si recv devuelve 0, significa que Valentina cerró el programa o se desconectó el cable
+            cout << "Cliente desconectado. Reabriendo canal de escucha...\n";
+            close(socket_cliente);
+            socket_cliente = -1;
         }
         return false;
     }
