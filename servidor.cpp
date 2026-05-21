@@ -5,11 +5,10 @@
 #include <cstring>
 #include <unistd.h>
 #include <arpa/inet.h>
-#include <fcntl.h> // Para configurar sockets no bloqueantes si es necesario
+#include <fcntl.h>
 
 using namespace std;
 
-// Estructura corregida: Ahora usa punteros (char*) para acoplarse con ctypes.c_char_p de Python
 struct DatosPlaca {
     const char* serie;
     const char* hora;
@@ -39,15 +38,13 @@ extern "C" {
         if (bind(server_fd, (struct sockaddr *)&direccion, sizeof(direccion)) < 0) return false;
         if (listen(server_fd, 3) < 0) return false;
 
-        // Configurar el servidor principal como NO BLOQUEANTE para que accept() no congele la interfaz
         fcntl(server_fd, F_SETFL, O_NONBLOCK);
 
-        cout << "Servidor listo. Esperando cliente en puerto 8080 (Modo No Bloqueante)...\n";
+        cout << "Servidor listo. Esperando cliente.\n";
         return true;
     }
 
     bool recibirPlaca(DatosPlaca* resultado) {
-        // Intentar aceptar al cliente si no está conectado
         if (socket_cliente == -1) {
             struct sockaddr_in address;
             socklen_t addrlen = sizeof(address); 
@@ -55,16 +52,15 @@ extern "C" {
             socket_cliente = accept(server_fd, (struct sockaddr *)&address, &addrlen);
             
             if (socket_cliente < 0) {
-                socket_cliente = -1; // No hay nadie intentando conectarse aún
+                socket_cliente = -1;
                 return false;
             }
-            // Cuando se conecta, configuramos el canal de lectura como NO BLOQUEANTE también
+
             fcntl(socket_cliente, F_SETFL, O_NONBLOCK);
-            cout << "¡El usuario se ha conectado al socket!\n";
+            cout << "El usuario se ha conectado al socket\n";
         }
 
         char buffer[1024] = {0};
-        // Leemos con MSG_DONTWAIT para que si no hay datos en ese milisegundo, la función retorne inmediatamente
         int bytes_leidos = recv(socket_cliente, buffer, 1023, MSG_DONTWAIT);
             
         if (bytes_leidos > 0) {
@@ -82,14 +78,13 @@ extern "C" {
             char hora_aux[20] = {0};
             int celda_aux = 0;
 
-            // Valentina envía: "SERIE,HORA,CELDA" (3 elementos)
             int asignados = sscanf(buffer, "%[^,],%[^,],%d", serie_aux, hora_aux, &celda_aux);
 
             if (asignados >= 3) {
                 string placa = serie_aux;
                 static char accion_aux[20] = {0};
 
-                // Lógica del mapa/diccionario para controlar ingresos y salidas
+                //Diccionario
                 if (celdas.find(placa) == celdas.end()) {
                     celdas[placa] = celda_aux;
                     strcpy(accion_aux, "INGRESO");
@@ -99,25 +94,22 @@ extern "C" {
                     strcpy(accion_aux, "SALIDA");
                 }
                 
-                // Memoria estática persistente para que Python pueda leer los punteros sin que se borren
                 static char serie_persistente[20];
                 static char hora_persistente[20];
                 
                 strcpy(serie_persistente, serie_aux);
                 strcpy(hora_persistente, hora_aux);
                 
-                // Asignamos las direcciones de los punteros de forma exacta
                 resultado->celda = celda_aux;
                 resultado->serie = serie_persistente;
                 resultado->hora = hora_persistente;
                 resultado->accion = accion_aux;
 
-                cout << "[C++ exitoso] Placa: " << resultado->serie << " | Accion: " << resultado->accion << " | Celda: " << resultado->celda << "\n";
+                cout << "Placa: " << resultado->serie << " Accion: " << resultado->accion << " Celda: " << resultado->celda << "\n";
                 return true; 
             }
         } else if (bytes_leidos == 0) {
-            // Si recv devuelve 0, significa que Valentina cerró el programa o se desconectó el cable
-            cout << "Cliente desconectado. Reabriendo canal de escucha...\n";
+            cout << "Cliente desconectado.\n";
             close(socket_cliente);
             socket_cliente = -1;
         }
