@@ -1,6 +1,7 @@
 # Parqueadero
 Diagrama UML
-<img width="1000" height="623" alt="image" src="https://lucid.app/lucidchart/745eff9c-ba6e-422b-93a8-695b9b063ea3/edit?page=0_0&invitationId=inv_53f7b922-190b-4287-8542-833f9d9810c0#" />
+<img width="781" height="365" alt="Captura de pantalla 2026-05-21 190835" src="https://github.com/user-attachments/assets/3a4cf9c8-2d79-4381-96a9-979e1cc608c0" />
+
 
 RESUMEN DEL PROYECTO
 
